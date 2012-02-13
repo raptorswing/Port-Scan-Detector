@@ -13,6 +13,7 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QDir>
+#include <QCloseEvent>
 
 const quint32 saveSettingsIntervalMS = 5 * 60 * 1000; //Five minutes
 
@@ -95,6 +96,25 @@ void MainWindow::changeEvent(QEvent *e)
     default:
         break;
     }
+}
+
+void MainWindow::closeEvent(QCloseEvent * event)
+{
+    //If we aren't detecting, just close normally
+    if (this->detector == 0)
+    {
+        QMainWindow::closeEvent(event);
+        return;
+    }
+
+    //If we're detecting, don't close
+    event->ignore();
+
+    //Toggle the "start" button to "off" so that our detector will stop.
+    this->on_startButton_toggled(false);
+
+    //Try again -- detector should stop by then
+    QTimer::singleShot(10,this,SLOT(close()));
 }
 
 //private slot

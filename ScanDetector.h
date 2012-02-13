@@ -14,8 +14,8 @@ public:
      * @brief
      *
      * @param listenPorts list of ports to listen on
-     * @param portHitThreshold not used right now
-     * @param timeoutSeconds not used right now
+     * @param portHitThreshold the number of ports that must be hit before reporting a scan. Not currently used.
+     * @param timeoutSeconds the number of seconds from the last "hit" on any port before we consider ourselves not being scanned
      * @param parent
      */
     explicit ScanDetector(const QList<quint16>& listenPorts,

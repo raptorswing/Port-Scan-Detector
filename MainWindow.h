@@ -21,6 +21,7 @@ public:
 
 protected:
     void changeEvent(QEvent *e);
+    void closeEvent(QCloseEvent *);
 
 private slots:
     void on_listenOnStartCheckbox_toggled(bool checked);

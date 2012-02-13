@@ -1,4 +1,4 @@
-IDI_ICON1 ICON DISCARDABLE "target-green16.ico"
+IDI_ICON1 ICON DISCARDABLE "target-green128.ico"
 IDI_ICON2 ICON DISCARDABLE "target-green64.ico"
 IDI_ICON3 ICON DISCARDABLE "target-green32.ico"
-IDI_ICON4 ICON DISCARDABLE "target-green128.ico"
+IDI_ICON4 ICON DISCARDABLE "target-green16.ico"
