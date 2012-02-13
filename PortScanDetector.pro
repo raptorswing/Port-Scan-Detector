@@ -24,6 +24,9 @@ FORMS    += MainWindow.ui
 RESOURCES += \
     resources.qrc
 
+#This makes the icon work with win32
+win32:RC_FILE += icon.rc
+
 
 
 

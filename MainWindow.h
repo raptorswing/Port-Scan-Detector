@@ -33,6 +33,10 @@ private slots:
 
     void on_startButton_toggled(bool checked);
 
+    void on_exportLogButton_clicked();
+
+    void on_clearLogButton_clicked();
+
     void restoreSettings();
 
     void saveSettings();
@@ -47,9 +51,10 @@ private slots:
 
     void handleScanDetected(QHostAddress,QList<quint16>);
 
-
 private:
+    static QString logFilePath();
     void createTrayIcon();
+    bool writeLogToFile(const QString& filePath, QString * errorMessage = 0);
     Ui::MainWindow *ui;
 
     ScanDetector * detector;

@@ -8,7 +8,13 @@
 #include <QSettings>
 #include <QTimer>
 #include <QStringBuilder>
+#include <QFileDialog>
 #include <QDateTime>
+#include <QMessageBox>
+#include <QFile>
+#include <QDir>
+
+const quint32 saveSettingsIntervalMS = 5 * 60 * 1000; //Five minutes
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -35,6 +41,14 @@ MainWindow::MainWindow(QWidget *parent) :
     //If our settings say to start minimized, do so
     if (this->startMinimized)
         this->setWindowState(Qt::WindowMinimized);
+
+    //Write settings (and more importantly, log data) to disk every once in a while
+    QTimer * timer = new QTimer(this);
+    connect(timer,
+            SIGNAL(timeout()),
+            this,
+            SLOT(saveSettings()));
+    timer->start(saveSettingsIntervalMS);
 }
 
 MainWindow::~MainWindow()
@@ -66,6 +80,7 @@ void MainWindow::changeEvent(QEvent *e)
         //If the window has just been minimized and our settings say to minimize to tray, do so
         if (this->windowState() & Qt::WindowMinimized)
         {
+            //The timer is a hack
             if (this->minimzeToTray)
                 QTimer::singleShot(5,this,SLOT(hide()));
         }
@@ -145,6 +160,40 @@ void MainWindow::on_startButton_toggled(bool checked)
     }
 }
 
+void MainWindow::on_exportLogButton_clicked()
+{
+    QString filePath = QFileDialog::getSaveFileName(this,
+                                                    "Select output file for log export",
+                                                    QString(),
+                                                    "*.txt");
+    //If the filePath is empty, the user probably cancelled the dialog
+    if (filePath.isEmpty())
+        return;
+
+    //Try to write --- show an error otherwise
+    QString errorMessage;
+    if (!this->writeLogToFile(filePath,&errorMessage))
+    {
+        qWarning() << errorMessage;
+        QMessageBox::warning(this,
+                             "Failed to export log",
+                             errorMessage);
+        return;
+    }
+
+    //Show a message saying the export succeeded
+    const QString message = "Log exported successfully.";
+    qDebug() << message;
+    QMessageBox::information(this,
+                             "Log Export",
+                             message);
+}
+
+void MainWindow::on_clearLogButton_clicked()
+{
+    this->ui->logTextEdit->clear();
+}
+
 //private slot
 void MainWindow::restoreSettings()
 {
@@ -161,11 +210,42 @@ void MainWindow::restoreSettings()
         this->ui->startMinimizedCheckbox->setChecked(settings.value("startMinimized").toBool());
     if (settings.contains("geometry"))
         this->setGeometry(settings.value("geometry").toRect());
+
+    //Load the log from disk if it exists
+    QFile fp(this->logFilePath());
+    if (fp.exists())
+    {
+        //Try to open the file
+        if (!fp.open(QFile::ReadOnly))
+        {
+            const QString error = "Failed to open log file for reading.";
+            qWarning() << error;
+            QMessageBox::warning(this,
+                                 "Warning",
+                                 error);
+        }
+
+        const QByteArray bytes = fp.readAll();
+        const QString string (bytes);
+
+        //Make sure we read ALL the bytes
+        if (bytes.size() < fp.size())
+        {
+            const QString error = "Failed to read complete log file";
+            qWarning() << error;
+            QMessageBox::warning(this,
+                                 "Warning",
+                                 error);
+        }
+        else
+            this->ui->logTextEdit->setPlainText(string);
+    }
 }
 
 //private slot
 void MainWindow::saveSettings()
 {
+    //Save the GUI settings
     QSettings settings;
     settings.setValue("ports",this->ui->portEntryLine->text());
     settings.setValue("listenOnStartup",this->ui->listenOnStartCheckbox->isChecked());
@@ -173,6 +253,16 @@ void MainWindow::saveSettings()
     settings.setValue("enableNotifications",this->ui->enableNotificationsCheckbox->isChecked());
     settings.setValue("startMinimized",this->ui->startMinimizedCheckbox->isChecked());
     settings.setValue("geometry",this->geometry());
+
+    //Save the current log to disk
+    QString errorMessage;
+    if (!this->writeLogToFile(this->logFilePath(),&errorMessage))
+    {
+        qWarning() << errorMessage;
+        QMessageBox::warning(this,
+                             "Warning",
+                             errorMessage);
+    }
 }
 
 //private slot
@@ -220,6 +310,12 @@ void MainWindow::handleScanDetected(QHostAddress host, QList<quint16> ports)
     this->logMessage(msg);
 }
 
+//private static
+QString MainWindow::logFilePath()
+{
+    return QDir::homePath() % QDir::separator() % QCoreApplication::applicationName() % "-log.txt";
+}
+
 
 //private
 void MainWindow::createTrayIcon()
@@ -234,5 +330,30 @@ void MainWindow::createTrayIcon()
             SLOT(showNormal()));
 }
 
+bool MainWindow::writeLogToFile(const QString &filePath, QString *errorMessage)
+{
+    //Try to open the file for writing. Return an error on failure
+    QFile fp(filePath);
+    if (!fp.open(QFile::ReadWrite | QFile::Truncate))
+    {
+        if (errorMessage)
+            *errorMessage = "Failed to open " % filePath % " to write the log. Error:" % fp.errorString();
+        return false;
+    }
 
+    //Try to write the data. Return an error on failure.
+    QByteArray writeBytes;
+    writeBytes += this->ui->logTextEdit->toPlainText();
 
+    if (fp.write(writeBytes) < writeBytes.size())
+    {
+        if (errorMessage)
+            *errorMessage = "Failed to completely write log file. Error:" % fp.errorString();
+        return false;
+    }
+
+    //Shouldn't be strictly necessary
+    fp.close();
+
+    return true;
+}
