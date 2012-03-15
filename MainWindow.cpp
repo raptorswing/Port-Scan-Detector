@@ -330,6 +330,21 @@ void MainWindow::handleScanDetected(QHostAddress host, QList<quint16> ports)
     this->logMessage(msg);
 }
 
+//private slot
+void MainWindow::handleTrayIconActivation()
+{
+    //If the tray icon is clicked while the GUI is visible, hide it
+    if (this->isVisible())
+        this->hide();
+    //If the tray icon is clicked while the GUI is hidden, restore it
+    else
+    {
+        this->showNormal();
+        this->activateWindow();
+        this->raise();
+    }
+}
+
 //private static
 QString MainWindow::logFilePath()
 {
@@ -347,7 +362,7 @@ void MainWindow::createTrayIcon()
     connect(this->trayIcon,
             SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
             this,
-            SLOT(showNormal()));
+            SLOT(handleTrayIconActivation()));
 }
 
 bool MainWindow::writeLogToFile(const QString &filePath, QString *errorMessage)

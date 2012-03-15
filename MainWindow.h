@@ -52,6 +52,8 @@ private slots:
 
     void handleScanDetected(QHostAddress,QList<quint16>);
 
+    void handleTrayIconActivation();
+
 private:
     static QString logFilePath();
     void createTrayIcon();
